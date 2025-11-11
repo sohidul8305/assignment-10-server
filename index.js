@@ -38,6 +38,11 @@ async function run() {
         .toArray();
       res.json(connections);
     });
+    app.delete("/connections/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await db.collection("connections").deleteOne({ _id: ObjectId(id) });
+  res.json(result);
+});
 
     app.get("/study/:id", async (req, res) => {
       try {
