@@ -7,8 +7,7 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-// assignment-10
-// SOq9BlazKPpRzI8Z
+
 const uri = "mongodb+srv://assignment-10:SOq9BlazKPpRzI8Z@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0";
 
 const client = new MongoClient(uri, {
@@ -19,47 +18,49 @@ const client = new MongoClient(uri, {
   },
 });
 
-
-app.get('/', (req, res) => {
-  res.send(`Simple CRUD server is running`);
-});
-
 async function run() {
   try {
     await client.connect();
-    const db = client.db('assignment-10')
-    const studyCollection = db.collection('study')
+    const db = client.db('assignment-10');
+    const studyCollection = db.collection('study');
 
-    app.get('/study', async(req, res) => {
-      const result  = await
-      studyCollection.find().toArray()
-      res.send(result)
-    })
+    app.get('/study', async (req, res) => {
+      const result = await studyCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get('/study/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+        console.log("Requested ID:", id);
+
+        const objectId = new ObjectId(id);
+        const result = await studyCollection.findOne({ _id: objectId });
+
+        if (!result) {
+          return res.status(404).send({ success: false, message: "Study partner not found" });
+        }
+
+        res.send({ success: true, result });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ success: false, message: "Invalid ID or server error" });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
-    console.log(" Ping successful! Successfully connected to MongoDB.");
+    console.log(" Ping successful! Connected to MongoDB.");
   } catch (error) {
     console.error(" MongoDB connection error:", error);
-  } finally {
-  
   }
 }
 
-app.get('/study/:id', async(req, res) => {
-  const {id} = req.params
-    console.log(id)
-    const objectId = new ObjectId(id)
-const result = await 
-  studyCollection.findOne({_id: ObjectId})
-    res.send({
-      success: true,
-      result 
-    })
-})
-
-
 run().catch(console.dir);
 
+app.get('/', (req, res) => {
+  res.send('Simple CRUD server is running');
+});
 
 app.listen(port, () => {
-  console.log(`Simple CRUD Server is running on port ${port}`);
+  console.log(` Server running on port ${port}`);
 });
