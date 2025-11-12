@@ -25,72 +25,86 @@ async function run() {
     const db = client.db("assignment-10");
     const studyCollection = db.collection("study");
 
+    console.log("MongoDB connected");
+
+    // 🔹 GET: all studies
     app.get("/study", async (req, res) => {
-      const result = await studyCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.get("/connections", async (req, res) => {
-      const userEmail = req.query.email;
-      const connections = await db
-        .collection("connections")
-        .find({ email: userEmail })
-        .toArray();
-      res.json(connections);
-    });
-    app.delete("/connections/:id", async (req, res) => {
-  const id = req.params.id;
-  const result = await db.collection("connections").deleteOne({ _id: ObjectId(id) });
-  res.json(result);
-});
-
-    app.get("/study/:id", async (req, res) => {
       try {
-        const { id } = req.params;
-        console.log("Requested ID:", id);
-
-        const objectId = new ObjectId(id);
-        const result = await studyCollection.findOne({ _id: objectId });
-
-        if (!result) {
-          return res
-            .status(404)
-            .send({ success: false, message: "Study partner not found" });
-        }
-
-        res.send({ success: true, result });
+        const studies = await studyCollection.find().toArray();
+        res.json(studies);
       } catch (error) {
         console.error(error);
-        res
-          .status(500)
-          .send({ success: false, message: "Invalid ID or server error" });
+        res.status(500).json({ success: false, message: "Server error" });
       }
     });
 
-    app.post("/study", async (req, res) => {
-      const data = req.body;
-      console.log(data);
-      const result = await studyCollection.insertOne(data);
+    // 🔹 GET: logged-in user's studies
+    app.get("/connections", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.json([]);
 
-      res.send({
-        success: true,
-        result,
-      });
+        const studies = await studyCollection.find({ email }).toArray();
+        res.json(studies);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+      }
     });
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(" Ping successful! Connected to MongoDB.");
+    // 🔹 POST: create new study profile
+    app.post("/study", async (req, res) => {
+      try {
+        const data = req.body;
+        if (!data.email) return res.status(400).json({ error: "Email required" });
+
+        const result = await studyCollection.insertOne(data);
+        res.json({ success: true, result });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+      }
+    });
+
+    // 🔹 DELETE: remove a study by _id
+    app.delete("/connections/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await studyCollection.deleteOne({ _id: new ObjectId(id) });
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+      }
+    });
+
+    // 🔹 UPDATE: update a study by _id
+    app.put("/connections/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updatedData = req.body;
+
+        const result = await studyCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updatedData }
+        );
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        
+        res.status(500).json({ success: false, message: "Server error" });
+      }
+    });
+
+    // 🔹 Simple server test
+    app.get("/", (req, res) => {
+      res.send("Server is running");
+    });
+
+    app.listen(port, () => console.log(`Server running on port ${port}`));
   } catch (error) {
-    console.error(" MongoDB connection error:", error);
+    console.error("MongoDB connection error:", error);
   }
 }
 
 run().catch(console.dir);
-
-app.get("/", (req, res) => {
-  res.send("Simple CRUD server is running");
-});
-
-app.listen(port, () => {
-  console.log(` Server running on port ${port}`);
-});
