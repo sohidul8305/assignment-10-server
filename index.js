@@ -43,6 +43,11 @@ async function run() {
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
+    app.get("/connections/:id", async (req, res) => {
+  const id = req.params.id;
+  const connection = await studyCollection.findOne({ _id: new ObjectId(id) });
+  res.send(connection);
+});
 
     // 🔹 Search by skills
     app.get("/search", async (req, res) => {
