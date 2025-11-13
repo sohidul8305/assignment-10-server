@@ -27,7 +27,7 @@ async function run() {
 
     console.log("MongoDB connected");
 
-    // 🔹 GET: all studies
+  
     app.get("/study", async (req, res) => {
       try {
         const studies = await studyCollection.find().toArray();
@@ -38,7 +38,7 @@ async function run() {
       }
     });
 
-    // 🔹 GET: logged-in user's studies
+
     app.get("/connections", async (req, res) => {
       try {
         const email = req.query.email;
@@ -52,7 +52,7 @@ async function run() {
       }
     });
 
-    // 🔹 POST: create new study profile
+
     app.post("/study", async (req, res) => {
       try {
         const data = req.body;
@@ -65,8 +65,31 @@ async function run() {
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
+    
+app.get("/search", async (req, res) => {
+  try {
+    const searchTerm = req.query.search || "";
+    if (!searchTerm) return res.json([]);
 
-    // 🔹 DELETE: remove a study by _id
+
+    const keywords = searchTerm.split(",").map((k) => k.trim());
+
+    const regexQueries = keywords.map((k) => ({
+      skills: { $elemMatch: { $regex: k, $options: "i" } },
+    }));
+
+
+    const results = await studyCollection.find({ $or: regexQueries }).toArray();
+
+    res.json(results);
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
     app.delete("/connections/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -78,7 +101,7 @@ async function run() {
       }
     });
 
-    // 🔹 UPDATE: update a study by _id
+
     app.put("/connections/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -96,7 +119,7 @@ async function run() {
       }
     });
 
-    // 🔹 Simple server test
+
     app.get("/", (req, res) => {
       res.send("Server is running");
     });
