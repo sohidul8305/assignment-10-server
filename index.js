@@ -27,7 +27,13 @@ async function run() {
 
     console.log("MongoDB connected");
 
-  
+    // 🔹 Initialize requestCount for existing docs
+    await studyCollection.updateMany(
+      { requestCount: { $exists: false } },
+      { $set: { requestCount: 0 } }
+    );
+
+    // 🔹 Get all studies
     app.get("/study", async (req, res) => {
       try {
         const studies = await studyCollection.find().toArray();
@@ -38,7 +44,44 @@ async function run() {
       }
     });
 
+    // 🔹 Search by skills
+    app.get("/search", async (req, res) => {
+      try {
+        const searchTerm = req.query.search || "";
+        if (!searchTerm) return res.json([]);
 
+        const keywords = searchTerm.split(",").map((k) => k.trim());
+
+        const regexQueries = keywords.map((k) => ({
+          skills: { $elemMatch: { $regex: k, $options: "i" } },
+        }));
+
+        const results = await studyCollection.find({ $or: regexQueries }).toArray();
+        res.json(results);
+      } catch (err) {
+        console.error("Search error:", err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    // 🔹 Send Partner Request (increment requestCount)
+    app.put("/partner-request/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const result = await studyCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $inc: { requestCount: 1 } }
+        );
+
+        res.json({ success: true, result });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+      }
+    });
+
+    // 🔹 Other routes (connections, post, delete, update)
     app.get("/connections", async (req, res) => {
       try {
         const email = req.query.email;
@@ -52,7 +95,6 @@ async function run() {
       }
     });
 
-
     app.post("/study", async (req, res) => {
       try {
         const data = req.body;
@@ -65,30 +107,6 @@ async function run() {
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
-    
-app.get("/search", async (req, res) => {
-  try {
-    const searchTerm = req.query.search || "";
-    if (!searchTerm) return res.json([]);
-
-
-    const keywords = searchTerm.split(",").map((k) => k.trim());
-
-    const regexQueries = keywords.map((k) => ({
-      skills: { $elemMatch: { $regex: k, $options: "i" } },
-    }));
-
-
-    const results = await studyCollection.find({ $or: regexQueries }).toArray();
-
-    res.json(results);
-  } catch (err) {
-    console.error("Search error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
 
     app.delete("/connections/:id", async (req, res) => {
       try {
@@ -100,7 +118,6 @@ app.get("/search", async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
-
 
     app.put("/connections/:id", async (req, res) => {
       try {
@@ -114,11 +131,9 @@ app.get("/search", async (req, res) => {
         res.json(result);
       } catch (error) {
         console.error(error);
-        
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
-
 
     app.get("/", (req, res) => {
       res.send("Server is running");
