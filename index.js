@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+require("dotenv").config()
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -9,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri =
-  "mongodb+srv://assignment-10:SOq9BlazKPpRzI8Z@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0";
+  `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -21,19 +23,19 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db("assignment-10");
     const studyCollection = db.collection("study");
 
     console.log("MongoDB connected");
 
-    // 🔹 Initialize requestCount for existing docs
+
     await studyCollection.updateMany(
       { requestCount: { $exists: false } },
       { $set: { requestCount: 0 } }
     );
 
-    // 🔹 Get all studies
+
     app.get("/study", async (req, res) => {
       try {
         const studies = await studyCollection.find().toArray();
@@ -49,7 +51,7 @@ async function run() {
   res.send(connection);
 });
 
-    // 🔹 Search by skills
+
     app.get("/search", async (req, res) => {
       try {
         const searchTerm = req.query.search || "";
@@ -69,7 +71,7 @@ async function run() {
       }
     });
 
-    // 🔹 Send Partner Request (increment requestCount)
+
     app.put("/partner-request/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -86,7 +88,7 @@ async function run() {
       }
     });
 
-    // 🔹 Other routes (connections, post, delete, update)
+  
     app.get("/connections", async (req, res) => {
       try {
         const email = req.query.email;
