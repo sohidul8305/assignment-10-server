@@ -23,7 +23,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // await client.connect();
     const db = client.db("assignment-10");
     const studyCollection = db.collection("study");
 
@@ -52,6 +51,7 @@ async function run() {
 });
 
 
+
     app.get("/search", async (req, res) => {
       try {
         const searchTerm = req.query.search || "";
@@ -70,6 +70,7 @@ async function run() {
         res.status(500).json({ message: "Server error" });
       }
     });
+
 
 
     app.put("/partner-request/:id", async (req, res) => {
