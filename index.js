@@ -1,8 +1,8 @@
+// index.js
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
-require("dotenv").config()
+require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,146 +10,107 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const uri =
-  `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
-
+// MongoDB connection
+const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.hz6ypdj.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
+  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true },
 });
 
+let isConnected = false;
+async function connectDB() {
+  if (isConnected) return;
+  // await client.connect();
+  isConnected = true;
+  console.log("MongoDB Connected");
+}
+    // Root
+    app.get("/", (req, res) => res.send("Local Server Running"));
+// Run server
 async function run() {
   try {
-    const db = client.db("assignment-10");
+    await connectDB();
+    const db = client.db(process.env.DB_NAME);
     const studyCollection = db.collection("study");
 
-    console.log("MongoDB connected");
-
-
+    // Add missing requestCount
     await studyCollection.updateMany(
       { requestCount: { $exists: false } },
       { $set: { requestCount: 0 } }
     );
 
 
+
+    // Routes
+
+    // Get all studies
     app.get("/study", async (req, res) => {
       try {
         const studies = await studyCollection.find().toArray();
         res.json(studies);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
-    app.get("/connections/:id", async (req, res) => {
-  const id = req.params.id;
-  const connection = await studyCollection.findOne({ _id: new ObjectId(id) });
-  res.send(connection);
-});
 
-
-
-    app.get("/search", async (req, res) => {
-      try {
-        const searchTerm = req.query.search || "";
-        if (!searchTerm) return res.json([]);
-
-        const keywords = searchTerm.split(",").map((k) => k.trim());
-
-        const regexQueries = keywords.map((k) => ({
-          skills: { $elemMatch: { $regex: k, $options: "i" } },
-        }));
-
-        const results = await studyCollection.find({ $or: regexQueries }).toArray();
-        res.json(results);
-      } catch (err) {
-        console.error("Search error:", err);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-
-
-    app.put("/partner-request/:id", async (req, res) => {
+    // Get single study by ID
+    app.get("/study/:id", async (req, res) => {
       try {
         const id = req.params.id;
-
-        const result = await studyCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $inc: { requestCount: 1 } }
-        );
-
-        res.json({ success: true, result });
-      } catch (error) {
-        console.error(error);
+        const study = await studyCollection.findOne({ _id: new ObjectId(id) });
+        if (!study) return res.status(404).json({ message: "Not found" });
+        res.json(study);
+      } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
 
-  
-    app.get("/connections", async (req, res) => {
-      try {
-        const email = req.query.email;
-        if (!email) return res.json([]);
-
-        const studies = await studyCollection.find({ email }).toArray();
-        res.json(studies);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error" });
-      }
-    });
-
+    // Add new study
     app.post("/study", async (req, res) => {
       try {
         const data = req.body;
         if (!data.email) return res.status(400).json({ error: "Email required" });
-
         const result = await studyCollection.insertOne(data);
         res.json({ success: true, result });
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
 
-    app.delete("/connections/:id", async (req, res) => {
+    // Update study
+    app.put("/study/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await studyCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: req.body }
+        );
+        res.json({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Server error" });
+      }
+    });
+
+    // Delete study
+    app.delete("/study/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const result = await studyCollection.deleteOne({ _id: new ObjectId(id) });
-        res.json(result);
-      } catch (error) {
-        console.error(error);
+        res.json({ success: true, result });
+      } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
       }
     });
 
-    app.put("/connections/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const updatedData = req.body;
 
-        const result = await studyCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updatedData }
-        );
-        res.json(result);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error" });
-      }
-    });
 
-    app.get("/", (req, res) => {
-      res.send("Server is running");
-    });
-
-    app.listen(port, () => console.log(`Server running on port ${port}`));
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
+    app.listen(port, () => console.log(`Local Server running on port ${port}`));
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
   }
 }
 
