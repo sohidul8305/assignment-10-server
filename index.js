@@ -22,7 +22,7 @@ async function run() {
     const requestCollection = db.collection("partnerRequests");
 
     /** ====================
-     * Study Collection APIs
+     * Study Collection API
      * ==================== */
 
     // GET all study profiles
