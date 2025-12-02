@@ -36,14 +36,7 @@ async function run() {
       }
     });
 
-    // show for mobile
-    app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true,
-  })
-);
+ 
 
     // GET single study profile
     app.get("/study/:id", async (req, res) => {
