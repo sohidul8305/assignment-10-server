@@ -112,20 +112,40 @@ async function run() {
 
 run();
 
-/** ===========================
- * 404 Handler (Must be OUTSIDE run)
- * =========================== */
-// app.use((req, res) => {
-//   res.status(404).json({
-//     success: false,
-//     message: "404 - Route not found",
-//     path: req.originalUrl,
-//   });
-// });
 
-/** ===========================
- * Start Server (Outside run)
- * =========================== */
+    // CREATE Profile (POST)
+    app.post("/study", async (req, res) => {
+      const result = await studyCollection.insertOne(req.body);
+      res.send(result);
+    });
+
+    // GET all profiles
+    app.get("/study", async (req, res) => {
+      const result = await studyCollection.find().toArray();
+      res.send(result);
+    });
+
+    // GET profile by email
+    app.get("/study/email", async (req, res) => {
+      const email = req.query.email;
+      const result = await studyCollection.find({ email }).toArray();
+      res.send(result);
+    });
+
+    // GET Partner Requests
+    app.get("/partnerRequests", async (req, res) => {
+      const email = req.query.email;
+      if (!email)
+        return res.status(400).json({ success: false, message: "Email required" });
+
+      const requests = await requestCollection.find({ userEmail: email }).toArray();
+      res.json(requests);
+    });
+
+    app.get("/", (req, res) => {
+      res.send("Server Running Successfully!");
+    });
+
 app.listen(port, () => console.log(`Server running on port ${port}`));
 app.get('/', (req, res) => {
 res.send("Server is running fine")
