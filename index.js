@@ -77,30 +77,40 @@ async function run() {
     // ==============================
     // UPDATE STUDY PROFILE
     // ==============================
-    app.put("/study/:id", async (req, res) => {
-      const { id } = req.params;
-      const updated = req.body;
+ // UPDATE STUDY
+app.put("/study/:id", async (req, res) => {
+  const { id } = req.params;
 
-      const result = await studyCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updated }
-      );
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
 
-      res.json({ modifiedCount: result.modifiedCount });
-    });
+  const result = await studyCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: req.body }
+  );
 
-    // ==============================
-    // DELETE STUDY PROFILE
-    // ==============================
-    app.delete("/study/:id", async (req, res) => {
-      const { id } = req.params;
+  res.json({ modifiedCount: result.modifiedCount });
+});
 
-      const result = await studyCollection.deleteOne({
-        _id: new ObjectId(id),
-      });
+// DELETE STUDY
+// DELETE STUDY (Server Side)
+// DELETE STUDY (Server Side)
+app.delete("/study/:id", async (req, res) => {
+  const { id } = req.params;
 
-      res.json({ deletedCount: result.deletedCount });
-    });
+  if (!ObjectId.isValid(id)) { // 1. ID Validation
+    return res.status(400).json({ message: "Invalid ID" });
+  }
+
+  const result = await studyCollection.deleteOne({ // 2. Delete Operation
+    _id: new ObjectId(id),
+  });
+  
+  // 3. Send Response { deletedCount: 0 or 1 }
+  res.json({ deletedCount: result.deletedCount }); 
+});
+
 
     // ==============================
     // INCREMENT partnerCount
