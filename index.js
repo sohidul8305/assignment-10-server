@@ -20,16 +20,19 @@ async function run() {
     await client.connect();
     console.log("MongoDB Connected");
 
-    // ✔ Correct DB and Collections
     const db = client.db(process.env.DB_NAME);
     const studyCollection = db.collection("study");
     const requestCollection = db.collection("partnerRequests");
 
     // ==============================
-    // GET ALL STUDY PROFILES
+    // GET STUDY (ALL or BY EMAIL)
     // ==============================
     app.get("/study", async (req, res) => {
-      const list = await studyCollection.find().toArray();
+      const email = req.query.email;
+
+      const query = email ? { email } : {};
+      const list = await studyCollection.find(query).toArray();
+
       res.json(list);
     });
 
@@ -37,22 +40,15 @@ async function run() {
     // GET STUDY BY ID
     // ==============================
     app.get("/study/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
+      const { id } = req.params;
+      if (!ObjectId.isValid(id))
+        return res.status(400).json({ message: "Invalid ID" });
 
-        if (!ObjectId.isValid(id))
-          return res.status(400).json({ message: "Invalid ID" });
+      const result = await studyCollection.findOne({ _id: new ObjectId(id) });
+      if (!result)
+        return res.status(404).json({ message: "Not found" });
 
-        const study = await studyCollection.findOne({ _id: new ObjectId(id) });
-
-        if (!study)
-          return res.status(404).json({ message: "Profile not found" });
-
-        res.json(study);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
-      }
+      res.json(result);
     });
 
     // ==============================
@@ -61,8 +57,12 @@ async function run() {
     app.post("/study", async (req, res) => {
       const data = req.body;
 
+      if (!data.email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
       if (typeof data.subject === "string") {
-        data.subject = data.subject.split(",").map((s) => s.trim());
+        data.subject = data.subject.split(",").map(s => s.trim());
       }
 
       const result = await studyCollection.insertOne({
@@ -78,10 +78,11 @@ async function run() {
     // UPDATE STUDY PROFILE
     // ==============================
     app.put("/study/:id", async (req, res) => {
+      const { id } = req.params;
       const updated = req.body;
 
       const result = await studyCollection.updateOne(
-        { _id: new ObjectId(req.params.id) },
+        { _id: new ObjectId(id) },
         { $set: updated }
       );
 
@@ -92,58 +93,38 @@ async function run() {
     // DELETE STUDY PROFILE
     // ==============================
     app.delete("/study/:id", async (req, res) => {
+      const { id } = req.params;
+
       const result = await studyCollection.deleteOne({
-        _id: new ObjectId(req.params.id),
+        _id: new ObjectId(id),
       });
 
       res.json({ deletedCount: result.deletedCount });
     });
 
     // ==============================
-    // GET BY EMAIL
+    // INCREMENT partnerCount
     // ==============================
-    app.get("/studyByEmail", async (req, res) => {
-      const email = req.query.email;
-      if (!email) return res.json([]);
+    app.post("/study/:id/incrementCount", async (req, res) => {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id))
+        return res.status(400).json({ message: "Invalid ID" });
 
-      const result = await studyCollection.find({ email }).toArray();
-      res.send(result);
+      const result = await studyCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $inc: { partnerCount: 1 } },
+        { returnDocument: "after" }
+      );
+
+      res.json({ success: true, partner: result.value });
     });
 
     // ==============================
-    // SEND PARTNER REQUEST + INCREMENT partnerCount
-    // ==============================
-// Increment partnerCount
-// Increment partnerCount
-app.post("/study/:id/incrementCount", async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid ID" });
-
-    // MongoDB increment operator ব্যবহার করে count +1
-    const result = await studyCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $inc: { partnerCount: 1 } }, // ✅ increment operator
-      { returnDocument: "after" } // updated document ফেরত দেবে
-    );
-
-    res.json({ success: true, partner: result.value });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-
-
-
-
-    // ==============================
-    // Delete Request
+    // DELETE PARTNER REQUEST
     // ==============================
     app.delete("/partnerRequests/:id", async (req, res) => {
-      const id = req.params.id;
+      const { id } = req.params;
+
       const result = await requestCollection.deleteOne({
         _id: new ObjectId(id),
       });
@@ -165,5 +146,6 @@ app.post("/study/:id/incrementCount", async (req, res) => {
 
 run();
 
-// Start Server
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
