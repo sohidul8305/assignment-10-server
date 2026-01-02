@@ -76,6 +76,8 @@ async function run() {
       res.json({ insertedId: result.insertedId });
     });
 
+
+
     // ==============================
     // UPDATE STUDY PROFILE
     // ==============================
@@ -108,28 +110,38 @@ app.delete("/study/:id", async (req, res) => {
   const result = await studyCollection.deleteOne({ // 2. Delete Operation
     _id: new ObjectId(id),
   });
-  
+
   // 3. Send Response { deletedCount: 0 or 1 }
-  res.json({ deletedCount: result.deletedCount }); 
+  res.json({ deletedCount: result.deletedCount });
 });
 
 
-    // ==============================
-    // INCREMENT partnerCount
-    // ==============================
-    app.post("/study/:id/incrementCount", async (req, res) => {
-      const { id } = req.params;
-      if (!ObjectId.isValid(id))
-        return res.status(400).json({ message: "Invalid ID" });
+app.post("/study/:id/incrementCount", async (req, res) => {
+  const { id } = req.params;
 
-      const result = await studyCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $inc: { partnerCount: 1 } },
-        { returnDocument: "after" }
-      );
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
 
-      res.json({ success: true, partner: result.value });
-    });
+  const updateResult = await studyCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $inc: { partnerCount: 1 } }
+  );
+
+  if (updateResult.modifiedCount === 0) {
+    return res.status(404).json({ message: "Partner not found" });
+  }
+
+  const updatedPartner = await studyCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  res.json({
+    success: true,
+    partner: updatedPartner,
+  });
+});
+
 
     // ==============================
     // DELETE PARTNER REQUEST
