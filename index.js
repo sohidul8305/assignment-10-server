@@ -23,6 +23,8 @@ async function run() {
     const db = client.db(process.env.DB_NAME);
     const studyCollection = db.collection("study");
     const requestCollection = db.collection("partnerRequests");
+    const itemsCollection = db.collection("items");
+
 
     // ==============================
     // GET STUDY (ALL or BY EMAIL)
@@ -35,6 +37,98 @@ async function run() {
 
       res.json(list);
     });
+
+
+    // ==============================
+// ADD ITEM (NEW COLLECTION)
+// ==============================
+app.post("/items", async (req, res) => {
+  const item = req.body;
+
+  // basic validation
+  if (!item.name || !item.category || !item.quantity) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const result = await itemsCollection.insertOne({
+    ...item,
+    quantity: Number(item.quantity),
+    createdAt: new Date(),
+  });
+
+  res.json({
+    success: true,
+    insertedId: result.insertedId,
+  });
+});
+
+
+// ==============================
+// GET ALL ITEMS
+// ==============================
+app.get("/items", async (req, res) => {
+  const items = await itemsCollection.find().toArray();
+  res.json(items);
+});
+
+
+// ==============================
+// DELETE ITEM
+// ==============================
+app.delete("/items/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
+
+  const result = await itemsCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  res.json({ deletedCount: result.deletedCount });
+});
+
+
+app.delete("/study/:id", async (req, res) => {
+  const result = await studyCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+  });
+  res.json({ deletedCount: result.deletedCount });
+});
+
+
+// GET ALL ITEMS
+app.get("/items", async (req, res) => {
+  const items = await itemsCollection.find().toArray();
+  res.json(items);
+});
+
+// ADD ITEM
+app.post("/items", async (req, res) => {
+  const item = req.body;
+  const result = await itemsCollection.insertOne({
+    ...item,
+    createdAt: new Date(),
+  });
+  res.json(result);
+});
+
+// DELETE ITEM
+app.delete("/items/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
+
+  const result = await itemsCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  res.json({ deletedCount: result.deletedCount });
+});
+
 
 
 
