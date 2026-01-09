@@ -210,31 +210,41 @@ app.delete("/study/:id", async (req, res) => {
 });
 
 
+// ==============================
+// INCREMENT PARTNER COUNT (+1)
+// ==============================
+  // Increment partner count
+
+// Increment partnerCount
 app.post("/study/:id/incrementCount", async (req, res) => {
   const { id } = req.params;
 
   if (!ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Invalid ID" });
+    return res.status(400).json({ success: false, message: "Invalid partner ID" });
   }
 
-  const updateResult = await studyCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $inc: { partnerCount: 1 } }
-  );
+  try {
+    const updateResult = await studyCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $inc: { partnerCount: 1 } }
+    );
 
-  if (updateResult.modifiedCount === 0) {
-    return res.status(404).json({ message: "Partner not found" });
+    if (updateResult.modifiedCount === 0) {
+      return res.status(404).json({ success: false, message: "Partner not found" });
+    }
+
+    const updatedPartner = await studyCollection.findOne({ _id: new ObjectId(id) });
+
+    res.json({ success: true, partner: updatedPartner });
+  } catch (err) {
+    console.error("Increment partnerCount error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  const updatedPartner = await studyCollection.findOne({
-    _id: new ObjectId(id),
-  });
-
-  res.json({
-    success: true,
-    partner: updatedPartner,
-  });
 });
+
+
+
+
 
 
     // ==============================
